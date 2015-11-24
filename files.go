@@ -8,10 +8,19 @@ import (
 	"strings"
 )
 
+type HideFileAction string
+
+const (
+	HIDE_FILE_ACTION_HIDE   HideFileAction = "hide"
+	HIDE_FILE_ACTION_UPLOAD                = "upload"
+)
+
 const (
 	DELETE_FILE_VERSION_URL string = "/b2api/v1/b2_delete_file_version"
 	DOWNLOAD_FILE_BY_ID_URL string = "/b2api/v1/b2_download_file_by_id"
 	GET_FILE_INFO_URL       string = "/b2api/v1/b2_get_file_info"
+	GET_UPLOAD_URL_URL      string = "/b2api/v1/b2_get_upload_url"
+	HIDE_FILE_URL           string = "/b2api/v1/b2_hide_file"
 )
 
 type FileVersion struct {
@@ -28,6 +37,19 @@ type FileInfo struct {
 	BucketId      string            `json:"bucketId"`
 	AccountId     string            `json:"accountId"`
 	Info          map[string]string `json:"fileInfo"`
+}
+
+type UploadUrlDetails struct {
+	BucketId  string `json:"bucketId"`
+	Url       string `json:"uploadUrl"`
+	AuthToken string `json:"authorizationToken"`
+}
+
+type HiddenFile struct {
+	FileId          string         `json:"fileId"`
+	FileName        string         `json:"fileName"`
+	UploadTimestamp int            `json:"uploadTimestamp"`
+	Action          HideFileAction `json:"action"`
 }
 
 func (c *Client) DeleteFileVersion(fileName string, fileId string) (*FileVersion, error) {
@@ -126,6 +148,42 @@ func (c *Client) GetFileInfo(fileId string) (*FileInfo, error) {
 		c.setHeaders(req)
 
 		var result FileInfo
+		err = c.requestJson(req, &result)
+
+		if err != nil {
+			return nil, err
+		}
+
+		return &result, nil
+	}
+}
+
+func (c *Client) GetUploadUrl(bucketId string) (*UploadUrlDetails, error) {
+	reqBody := bytes.NewBufferString(fmt.Sprintf(`{"bucketId": "%s"}`, bucketId))
+	if req, err := http.NewRequest("POST", c.buildRequestUrl(GET_UPLOAD_URL_URL), reqBody); err != nil {
+		return nil, err
+	} else {
+		c.setHeaders(req)
+
+		var result UploadUrlDetails
+		err = c.requestJson(req, &result)
+
+		if err != nil {
+			return nil, err
+		}
+
+		return &result, nil
+	}
+}
+
+func (c *Client) HideFile(bucketId, fileName string) (*HiddenFile, error) {
+	reqBody := bytes.NewBufferString(fmt.Sprintf(`{"bucketId": "%s", "fileName": "%s"}`, bucketId, fileName))
+	if req, err := http.NewRequest("POST", c.buildRequestUrl(HIDE_FILE_URL), reqBody); err != nil {
+		return nil, err
+	} else {
+		c.setHeaders(req)
+
+		var result HiddenFile
 		err = c.requestJson(req, &result)
 
 		if err != nil {
