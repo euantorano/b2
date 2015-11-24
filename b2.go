@@ -59,15 +59,20 @@ func NewClient(credentials Credentials) (*Client, error) {
 	}
 }
 
-// setHeaders applies the required `Authorization` and `Content-Type` headers ona  given HTTP request.
-func (a *Client) setHeaders(req *http.Request) {
-	req.Header.Set("Authorization", a.AuthToken)
+// setHeaders applies the required `Authorization` and `Content-Type` headers on a given HTTP request.
+func (c *Client) setHeaders(req *http.Request) {
+	req.Header.Set("Authorization", c.AuthToken)
 	req.Header.Set("Content-Type", "application/json; charset=utf-8")
 }
 
 // buildRequestUrl builds the full URL for a given path.
-func (a *Client) buildRequestUrl(reqPath string) string {
-	return a.ApiUrl + reqPath
+func (c *Client) buildRequestUrl(reqPath string) string {
+	return c.ApiUrl + reqPath
+}
+
+// buildFileRequestUrl buils the full URL for the given file path.
+func (c *Client) buildFileRequestUrl(reqPath string) string {
+	return c.DownloadUrl + reqPath
 }
 
 // requestJson simplifies the requesting of a JSON response via HTTP, returning an ApiError instance on status codes that don't equal `200 OK`.
@@ -94,5 +99,32 @@ func (c *Client) requestJson(req *http.Request, result interface{}) error {
 		}
 	} else {
 		return json.Unmarshal(body, result)
+	}
+}
+
+// requestJson simplifies the requesting of a JSON response via HTTP, returning an ApiError instance on status codes that don't equal `200 OK`.
+func (c *Client) requestBytes(req *http.Request) ([]byte, http.Header, error) {
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if resp.StatusCode != 200 {
+		// TODO: This is an API error
+		var errorResult ApiError
+
+		if json.Unmarshal(body, &errorResult); err != nil {
+			return nil, nil, err
+		} else {
+			return nil, nil, errorResult
+		}
+	} else {
+		return body, resp.Header, nil
 	}
 }

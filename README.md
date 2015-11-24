@@ -19,7 +19,7 @@ import (
 )
 
 func main() {
-	api, err := b2.NewClient(Credentials{"YOUR_ACCOUNT_ID", "YOUR_APPLICATION_KEY"})
+	api, err := b2.NewClient(b2.Credentials{"YOUR_ACCOUNT_ID", "YOUR_APPLICATION_KEY"})
 
 	if err != nil {
 		panic(err)
