@@ -2,6 +2,7 @@ package b2
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -21,6 +22,7 @@ const (
 	GET_FILE_INFO_URL       string = "/b2api/v1/b2_get_file_info"
 	GET_UPLOAD_URL_URL      string = "/b2api/v1/b2_get_upload_url"
 	HIDE_FILE_URL           string = "/b2api/v1/b2_hide_file"
+	LIST_FILE_NAMES_URL     string = "/b2api/v1/b2_list_file_names"
 )
 
 type FileVersion struct {
@@ -45,11 +47,17 @@ type UploadUrlDetails struct {
 	AuthToken string `json:"authorizationToken"`
 }
 
-type HiddenFile struct {
+type File struct {
 	FileId          string         `json:"fileId"`
 	FileName        string         `json:"fileName"`
 	UploadTimestamp int            `json:"uploadTimestamp"`
 	Action          HideFileAction `json:"action"`
+	Size            int64          `json:"size"`
+}
+
+type FileCollection struct {
+	Files        []File `json:"files"`
+	NextFileName string `json:"nextFileName"`
 }
 
 func (c *Client) DeleteFileVersion(fileName string, fileId string) (*FileVersion, error) {
@@ -176,14 +184,14 @@ func (c *Client) GetUploadUrl(bucketId string) (*UploadUrlDetails, error) {
 	}
 }
 
-func (c *Client) HideFile(bucketId, fileName string) (*HiddenFile, error) {
+func (c *Client) HideFile(bucketId, fileName string) (*File, error) {
 	reqBody := bytes.NewBufferString(fmt.Sprintf(`{"bucketId": "%s", "fileName": "%s"}`, bucketId, fileName))
 	if req, err := http.NewRequest("POST", c.buildRequestUrl(HIDE_FILE_URL), reqBody); err != nil {
 		return nil, err
 	} else {
 		c.setHeaders(req)
 
-		var result HiddenFile
+		var result File
 		err = c.requestJson(req, &result)
 
 		if err != nil {
@@ -192,4 +200,34 @@ func (c *Client) HideFile(bucketId, fileName string) (*HiddenFile, error) {
 
 		return &result, nil
 	}
+}
+
+func (c *Client) ListFileNamesWithCountAndOffset(bucketId, startFileName string, maxFileCount int) (*FileCollection, error) {
+	if !validateMaxFileCount(maxFileCount) {
+		return nil, errors.New("maxFileCount must be between 1 and 1000")
+	}
+
+	reqBody := bytes.NewBufferString(fmt.Sprintf(`{"bucketId": "%s", "startFileName": "%s", "maxFileCount": %d}`, bucketId, startFileName, maxFileCount))
+	if req, err := http.NewRequest("POST", c.buildRequestUrl(LIST_FILE_NAMES_URL), reqBody); err != nil {
+		return nil, err
+	} else {
+		c.setHeaders(req)
+
+		var result FileCollection
+		err = c.requestJson(req, &result)
+
+		if err != nil {
+			return nil, err
+		}
+
+		return &result, nil
+	}
+}
+
+func (c *Client) ListFileNames(bucketId string) (*FileCollection, error) {
+	return c.ListFileNamesWithCountAndOffset(bucketId, "", 100)
+}
+
+func validateMaxFileCount(count int) bool {
+	return count > 0 && count <= 1000
 }
