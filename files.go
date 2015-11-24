@@ -11,6 +11,7 @@ import (
 const (
 	DELETE_FILE_VERSION_URL string = "/b2api/v1/b2_delete_file_version"
 	DOWNLOAD_FILE_BY_ID_URL string = "/b2api/v1/b2_download_file_by_id"
+	GET_FILE_INFO_URL       string = "/b2api/v1/b2_get_file_info"
 )
 
 type FileVersion struct {
@@ -19,12 +20,14 @@ type FileVersion struct {
 }
 
 type FileInfo struct {
-	ContentLength int
-	ContentType   string
-	FileId        string
-	FileName      string
-	ContentSha1   string
-	Info          map[string]string
+	ContentLength int               `json:"contentLength"`
+	ContentType   string            `json:"contentType"`
+	FileId        string            `json:"fileId"`
+	FileName      string            `json:"fileName"`
+	ContentSha1   string            `json:"contentSha1"`
+	BucketId      string            `json:"bucketId"`
+	AccountId     string            `json:"accountId"`
+	Info          map[string]string `json:"fileInfo"`
 }
 
 func (c *Client) DeleteFileVersion(fileName string, fileId string) (*FileVersion, error) {
@@ -81,13 +84,11 @@ func (c *Client) DownloadFileById(fileId string) ([]byte, *FileInfo, error) {
 }
 
 func (c *Client) DownloadFileByName(bucketName string, fileName string) ([]byte, *FileInfo, error) {
-	requestPath := fmt.Sprintf("/%s/%s", bucketName, fileName)
+	requestPath := fmt.Sprintf("/file/%s/%s", bucketName, fileName)
 	if req, err := http.NewRequest("GET", c.buildFileRequestUrl(requestPath), nil); err != nil {
 		return nil, nil, err
 	} else {
 		req.Header.Set("Authorization", c.AuthToken)
-
-		fmt.Println(req)
 
 		data, header, err := c.requestBytes(req)
 
@@ -114,5 +115,23 @@ func (c *Client) DownloadFileByName(bucketName string, fileName string) ([]byte,
 		}
 
 		return data, info, nil
+	}
+}
+
+func (c *Client) GetFileInfo(fileId string) (*FileInfo, error) {
+	reqBody := bytes.NewBufferString(fmt.Sprintf(`{"fileId": "%s"}`, fileId))
+	if req, err := http.NewRequest("POST", c.buildRequestUrl(GET_FILE_INFO_URL), reqBody); err != nil {
+		return nil, err
+	} else {
+		c.setHeaders(req)
+
+		var result FileInfo
+		err = c.requestJson(req, &result)
+
+		if err != nil {
+			return nil, err
+		}
+
+		return &result, nil
 	}
 }
