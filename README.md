@@ -33,11 +33,58 @@ func main() {
 }
 ```
 
-## TODO
+### Uploading files
 
-- [x] API Auth
-- [x] Bucket handling
-- [ ] File handling
+In order to upload files, you mst know the ID of the bucket you want to upload to, and you must get an upload URL first. An example can be seen below:
+
+```go
+package main
+
+import (
+	"fmt"
+	"github.com/euantorano/b2"
+)
+
+func main() {
+	api, err := b2.NewClient(b2.Credentials{"YOUR_ACCOUNT_ID", "YOUR_APPLICATION_KEY"})
+
+	if err != nil {
+		panic(err)
+	}
+
+	uploadUrl, err := api.GetUploadUrl("BUCKET_ID")
+
+	if err != nil {
+		panic(err)
+	}
+
+	uploaded, err := api.UploadFile(uploadUrl.Url, uploadUrl.AuthToken, "/Users/euan/Desktop/hello_world.txt")
+
+	if err != nil {
+		panic(err)
+	}
+
+	/*
+	uploaded now contains details about the uploaded file, such as:
+
+	- fileId: The unique identifier for this version of this file. Used with b2_get_file_info, b2_download_file_by_id, and b2_delete_file_version.
+
+	- fileName: The name of this file, which can be used with b2_download_file_by_name.
+
+	- accountId: Your account ID.
+
+	- bucketId: The bucket that the file is in.
+
+	- contentLength: The number of bytes stored in the file.
+
+	- contentSha1: The SHA1 of the bytes stored in the file.
+
+	- contentType: The MIME type of the file.
+
+	- fileInfo: The custom information that was uploaded with the file. This is a JSON object, holding the name/value pairs that were uploaded with the file.
+	*/
+}
+```
 
 ## Licence
 

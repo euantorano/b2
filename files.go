@@ -2,9 +2,14 @@ package b2
 
 import (
 	"bytes"
+	"crypto/sha1"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
+	"net/url"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -257,4 +262,53 @@ func (c *Client) ListFileVersionsWithCountAndOffset(bucketId, startFileName stri
 
 func (c *Client) ListFileVersions(bucketId string) (*FileCollection, error) {
 	return c.ListFileVersionsWithCountAndOffset(bucketId, "", 100)
+}
+
+func (c *Client) UploadFile(uploadUrl, uploadAuthToken, filePath string) (*FileInfo, error) {
+	fileName := filepath.Base(filePath)
+
+	return c.UploadFileWithFileName(uploadUrl, uploadAuthToken, filePath, fileName)
+}
+
+func (c *Client) UploadFileWithFileName(uploadUrl, uploadAuthToken, filePath, fileName string) (*FileInfo, error) {
+	filePath = filepath.Clean(filePath)
+
+	fileDetails, err := os.Stat(filePath)
+
+	if err != nil {
+		return nil, err
+	}
+
+	fileLastModifiedMillis := fileDetails.ModTime().Unix()
+
+	fileContent, err := ioutil.ReadFile(filePath)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if req, err := http.NewRequest("POST", uploadUrl, bytes.NewBuffer(fileContent)); err != nil {
+		return nil, err
+	} else {
+		req.Header.Set("Authorization", uploadAuthToken)
+		req.Header.Set("X-Bz-File-Name", url.QueryEscape(fileName))
+		req.Header.Set("Content-Type", "b2/x-auto")
+		req.Header.Set("X-Bz-Content-Sha1", c.getHashForContent(fileContent))
+		req.Header.Set("X-Bz-Info-src_last_modified_millis", strconv.FormatInt(fileLastModifiedMillis, 10))
+
+		var result FileInfo
+		err = c.requestJson(req, &result)
+
+		if err != nil {
+			return nil, err
+		}
+
+		return &result, nil
+	}
+}
+
+func (c *Client) getHashForContent(content []byte) string {
+	sum := sha1.Sum(content)
+
+	return fmt.Sprintf("%x", sum)
 }
