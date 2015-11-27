@@ -23,6 +23,7 @@ const (
 	GET_UPLOAD_URL_URL      string = "/b2api/v1/b2_get_upload_url"
 	HIDE_FILE_URL           string = "/b2api/v1/b2_hide_file"
 	LIST_FILE_NAMES_URL     string = "/b2api/v1/b2_list_file_names"
+	LIST_FILE_VERSIONS_URL  string = "/b2api/v1/b2_list_file_versions"
 )
 
 type FileVersion struct {
@@ -230,4 +231,30 @@ func (c *Client) ListFileNames(bucketId string) (*FileCollection, error) {
 
 func validateMaxFileCount(count int) bool {
 	return count > 0 && count <= 1000
+}
+
+func (c *Client) ListFileVersionsWithCountAndOffset(bucketId, startFileName string, maxFileCount int) (*FileCollection, error) {
+	if !validateMaxFileCount(maxFileCount) {
+		return nil, errors.New("maxFileCount must be between 1 and 1000")
+	}
+
+	reqBody := bytes.NewBufferString(fmt.Sprintf(`{"bucketId": "%s", "startFileName": "%s", "maxFileCount": %d}`, bucketId, startFileName, maxFileCount))
+	if req, err := http.NewRequest("POST", c.buildRequestUrl(LIST_FILE_VERSIONS_URL), reqBody); err != nil {
+		return nil, err
+	} else {
+		c.setHeaders(req)
+
+		var result FileCollection
+		err = c.requestJson(req, &result)
+
+		if err != nil {
+			return nil, err
+		}
+
+		return &result, nil
+	}
+}
+
+func (c *Client) ListFileVersions(bucketId string) (*FileCollection, error) {
+	return c.ListFileVersionsWithCountAndOffset(bucketId, "", 100)
 }
