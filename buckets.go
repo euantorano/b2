@@ -15,10 +15,10 @@ const (
 )
 
 const (
-	LIST_BUCKETS_URL  string = "/b2api/v1/b2_list_buckets"
-	CREATE_BUCKET_URL string = "/b2api/v1/b2_create_bucket"
-	DELETE_BUCKET_URL string = "/b2api/v1/b2_delete_bucket"
-	UPDATE_BUCKET_URL string = "/b2api/v1/b2_update_bucket"
+	listBucketsURL  string = "/b2api/v1/b2_list_buckets"
+	createBucketURL string = "/b2api/v1/b2_create_bucket"
+	deleteBucketURL string = "/b2api/v1/b2_delete_bucket"
+	updateBucketURL string = "/b2api/v1/b2_update_bucket"
 )
 
 type Bucket struct {
@@ -43,7 +43,7 @@ func (bt BucketType) String() string {
 
 func (c *Client) ListBuckets() ([]Bucket, error) {
 	reqBody := bytes.NewBufferString(fmt.Sprintf(`{"accountId": "%s"}`, c.AccountId))
-	if req, err := http.NewRequest("POST", c.buildRequestUrl(LIST_BUCKETS_URL), reqBody); err != nil {
+	if req, err := http.NewRequest("POST", c.buildRequestUrl(listBucketsURL), reqBody); err != nil {
 		return nil, err
 	} else {
 		c.setHeaders(req)
@@ -76,7 +76,7 @@ func (c *Client) CreateBucket(bucketName string, bucketType BucketType) (*Bucket
 		return nil, err
 	}
 
-	if req, err := http.NewRequest("POST", c.buildRequestUrl(CREATE_BUCKET_URL), bytes.NewBuffer(requestBody)); err != nil {
+	if req, err := http.NewRequest("POST", c.buildRequestUrl(createBucketURL), bytes.NewBuffer(requestBody)); err != nil {
 		return nil, err
 	} else {
 		c.setHeaders(req)
@@ -107,7 +107,7 @@ func (c *Client) DeleteBucket(bucketId string) (*Bucket, error) {
 		return nil, err
 	}
 
-	if req, err := http.NewRequest("POST", c.buildRequestUrl(DELETE_BUCKET_URL), bytes.NewBuffer(requestBody)); err != nil {
+	if req, err := http.NewRequest("POST", c.buildRequestUrl(deleteBucketURL), bytes.NewBuffer(requestBody)); err != nil {
 		return nil, err
 	} else {
 		c.setHeaders(req)
@@ -140,7 +140,7 @@ func (c *Client) UpdateBucket(bucketId string, bucketType BucketType) (*Bucket, 
 		return nil, err
 	}
 
-	if req, err := http.NewRequest("POST", c.buildRequestUrl(UPDATE_BUCKET_URL), bytes.NewBuffer(requestBody)); err != nil {
+	if req, err := http.NewRequest("POST", c.buildRequestUrl(updateBucketURL), bytes.NewBuffer(requestBody)); err != nil {
 		return nil, err
 	} else {
 		c.setHeaders(req)
